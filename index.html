@@ -563,9 +563,21 @@ function draw(){
   }
   if(s.paused){r(W/2-150,116,300,64,L.panel);txt('PAUSED',W/2,146,16,L.ink,'center');txt('press P or tap to resume',W/2,168,8,L.dim,'center')}
 }
-function drawQuote(){if(quote.t>0&&s.st!=='cut'&&s.st!=='boom'){quote.t--;bubble(quote.text,WX+30,s.y-(s.duck&&s.st==='run'?50:96))}}
+function drawQuote(){if(quote.t>0&&s.st!=='cut'&&s.st!=='boom'){bubble(quote.text,WX+30,s.y-(s.duck&&s.st==='run'?50:96))}}
 function setPause(v){if(s.st==='run'||s.st==='boom'||s.st==='cut'){s.paused=v;keys.jump=keys.duck=false}}
-function loop(){step();draw();drawQuote();requestAnimationFrame(loop)}
+// The game logic always runs 60 times per second, no matter the screen's refresh rate
+// (60/120/144 Hz monitors, or slow devices). Drawing still happens once per screen frame.
+const TICK=1000/60;let lastTs=0,acc=0;
+function advance(dt){
+  acc+=Math.min(dt,250); // cap so a background tab doesn't fast-forward when you come back
+  let n=0;while(acc>=TICK&&n<10){step();if(quote.t>0)quote.t--;acc-=TICK;n++}
+  if(n===10)acc=0;
+  return n;
+}
+function loop(ts){
+  const dt=lastTs?ts-lastTs:TICK;lastTs=ts;
+  advance(dt);draw();drawQuote();requestAnimationFrame(loop);
+}
 
 /* ---------- outfit picker ---------- */
 let quote={text:'',t:0};
@@ -680,7 +692,7 @@ hold(document.getElementById('bJump'),pressJump,releaseJump);
 hold(document.getElementById('bDuck'),pressDuck,releaseDuck);
 document.querySelectorAll('.pad button').forEach(b=>b.addEventListener('click',()=>c.focus({preventScroll:true})));
 c.focus({preventScroll:true});
-loop();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
